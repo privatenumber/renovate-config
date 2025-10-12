@@ -1,0 +1,7 @@
+{
+	"typescript.tsdk": "node_modules/typescript/lib",
+	"files.associations": {
+		"renovate.json": "jsonc",
+		"default.json": "jsonc",
+	},
+}
