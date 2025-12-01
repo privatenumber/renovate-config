@@ -6,13 +6,23 @@
 		// Enables sensible defaults for most project types
 		"config:recommended",
 
-		// Groups all minor/patch updates into a single PR
-		"group:allNonMajor",
+		// Groups packages from monorepos together (e.g., all @babel/* packages)
+		"group:monorepos",
+
+		// Groups related packages that should update together (e.g., react & react-dom)
+		"group:recommended",
+
+		// Separate PRs for each major version when multiple majors available
+		":separateMultipleMajorReleases",
 
 		// This enables smart 'feat'/'fix' types, overriding the
 		// conservative 'chore' default from config:recommended
 		":semanticCommits"
 	],
+
+	// Separate minor and patch updates into different PRs
+	// This helps distinguish between feature updates (minor) and bug fixes (patch)
+	"separateMinorPatch": true,
 
 	// This section forces Renovate to always pin GitHub Actions to a specific commit hash
 	// for maximum build reproducibility. It automatically adds a comment with the
@@ -27,24 +37,51 @@
 	"rangeStrategy": "bump",
 
 	"packageRules": [
+		// NOTE ON DEVDEPENDENCIES IN BUNDLED PACKAGES:
+		// Many packages use bundlers (pkgroll, esbuild, rollup) that inline devDependencies
+		// into the published output. This means devDependency updates CAN affect production code.
+		// This configuration treats all dependencies conservatively, requiring manual review
+		// for minor updates regardless of dependency type.
+
+		// === PATCH UPDATES (bug fixes) ===
+		// Manual review required because:
+		// 1. Bundled packages: patches change the published output directly
+		// 2. Non-bundled packages: need to decide if a fix release is warranted for consumers
+		// Without a release, consumers won't get security/bug fixes in transitive dependencies
 		{
-			// This is the main rule for ALL non-major updates (both npm and GitHub Actions).
-			// It sets the schedule and automerge policy, providing a full week for review.
-			"description": "Schedule and automerge all non-major updates on Fridays",
+			"description": "Schedule patch updates (bug fixes) - manual review required",
 			"matchUpdateTypes": [
-				"minor",
 				"patch",
 				"digest"
 			],
-			// PR Creation: Fri 6 AM - 7 AM JST (Thursday 21:00-22:00 UTC)
+			// PR Creation: Friday 6-7 AM JST (Thursday 21:00-22:00 UTC)
+			// Cron: * 21 * * 4 (every minute of hour 21 on Thursday UTC)
 			"schedule": [
-				"after 9pm and before 10pm on Thursday"
+				"* 21 * * 4"
 			],
-			"automerge": true,
-			// Automerge: The *following* Friday 5 AM - 6 AM JST (Thursday 20:00-21:00 UTC)
-			"automergeSchedule": [
-				"after 8pm and before 9pm on Thursday"
-			]
+			// No automerge - need to assess if fix release is needed
+			"automerge": false,
+			// Group all patch updates together to reduce PR noise
+			"groupName": "patch-updates",
+			"groupSlug": "patch"
+		},
+
+		// === MINOR UPDATES (new features) ===
+		// These may introduce new functionality and deserve more review time.
+		// NOTE: This includes devDependencies that may be bundled into the output
+		// (e.g., when using bundlers to inline dependencies).
+		{
+			"description": "Schedule minor updates (new features) - manual review required",
+			"matchUpdateTypes": [
+				"minor"
+			],
+			// Friday 6-7 AM JST (Thursday 21:00-22:00 UTC) - same as patches but no automerge
+			// Cron: * 21 * * 4 (every minute of hour 21 on Thursday UTC)
+			"schedule": [
+				"* 21 * * 4"
+			],
+			// No automerge for minor updates since they may affect bundled output
+			"automerge": false
 		},
 		{
 			// This rule handles ALL GitHub Action updates (pinning and version bumps).
@@ -80,6 +117,16 @@
 				"engines"
 			],
 			"enabled": false
+		},
+		{
+			// Peer dependency updates affect consumers and require a release.
+			// Bumping peer dependencies is a consumer-facing change that enforces
+			// new minimum version requirements on the host environment.
+			"description": "Peer dependency updates affect consumers and require a release",
+			"matchDepTypes": [
+				"peerDependencies"
+			],
+			"semanticCommitType": "fix"
 		}
 	],
 
@@ -88,13 +135,15 @@
 	"lockFileMaintenance": {
 		"enabled": true,
 		"automerge": true,
-		// Automerge: Fri 5 AM - 6 AM JST (Thursday 20:00-21:00 UTC)
+		// Automerge: Friday 5-6 AM JST (Thursday 20:00-21:00 UTC)
+		// Cron: * 20 * * 4 (every minute of hour 20 on Thursday UTC)
 		"automergeSchedule": [
-			"after 8pm and before 9pm on Thursday"
+			"* 20 * * 4"
 		],
-		// PR Creation: Fri 6 AM - 7 AM JST (Thursday 21:00-22:00 UTC)
+		// PR Creation: Friday 6-7 AM JST (Thursday 21:00-22:00 UTC)
+		// Cron: * 21 * * 4 (every minute of hour 21 on Thursday UTC)
 		"schedule": [
-			"after 9pm and before 10pm on Thursday"
+			"* 21 * * 4"
 		]
 	}
 }
