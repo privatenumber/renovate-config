@@ -108,7 +108,8 @@
 		},
 		{
 			// Disable Node.js version updates in package.json engines field.
-			// Only .nvmrc should be updated (development Node version).
+			// engines.node is the support range for consumers. Only the development
+			// Node version (devEngines.runtime or .nvmrc) should be updated.
 			"description": "Disable package.json engines.node updates",
 			"matchManagers": [
 				"npm"
